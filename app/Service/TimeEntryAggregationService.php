@@ -244,7 +244,7 @@ class TimeEntryAggregationService
 
         $descriptionMapGroup1 = $group1Type !== null ? $this->loadDescriptorsMap($keysGroup1, $group1Type) : [];
         $descriptionMapGroup2 = $group2Type !== null ? $this->loadDescriptorsMap($keysGroup2, $group2Type) : [];
-        
+
         // Load task names for date-based groupings
         $tasksMapGroup1 = [];
         if ($group1Type !== null && in_array($group1Type, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year])) {
@@ -387,7 +387,7 @@ class TimeEntryAggregationService
     {
         $tasksMap = [];
         $groupByQuery = $this->getGroupByQuery($groupType, $timezone, $startOfWeek);
-        
+
         // Query to get distinct task names per date group
         $result = $timeEntriesQuery
             ->selectRaw($groupByQuery.' as date_group, task_id')
@@ -396,7 +396,7 @@ class TimeEntryAggregationService
             ->orderBy('date_group')
             ->orderBy('task_id')
             ->get();
-        
+
         // Load task names
         $taskIds = $result->pluck('task_id')->unique()->filter()->toArray();
         $tasks = Task::query()
@@ -404,13 +404,13 @@ class TimeEntryAggregationService
             ->select('id', 'name')
             ->get()
             ->keyBy('id');
-        
+
         // Group tasks by date
         foreach ($result as $row) {
             /** @var object{date_group: string, task_id: string} $row */
             $dateGroup = (string) $row->date_group;
             $taskId = (string) $row->task_id;
-            
+
             if (isset($tasks[$taskId])) {
                 if (!isset($tasksMap[$dateGroup])) {
                     $tasksMap[$dateGroup] = [];
@@ -418,12 +418,12 @@ class TimeEntryAggregationService
                 $tasksMap[$dateGroup][] = $tasks[$taskId]->name;
             }
         }
-        
+
         // Convert arrays to comma-separated strings
         foreach ($tasksMap as $dateGroup => $taskNames) {
             $tasksMap[$dateGroup] = implode(', ', array_unique($taskNames));
         }
-        
+
         return $tasksMap;
     }
 
