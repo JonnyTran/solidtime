@@ -208,6 +208,7 @@ class TimeEntryAggregationService
      *           color: string|null,
      *           seconds: int,
      *           cost: int|null,
+     *           tasks: string|null,
      *           grouped_type: string|null,
      *           grouped_data: null|array<array{
      *               key: string|null,
@@ -244,10 +245,17 @@ class TimeEntryAggregationService
         $descriptionMapGroup1 = $group1Type !== null ? $this->loadDescriptorsMap($keysGroup1, $group1Type) : [];
         $descriptionMapGroup2 = $group2Type !== null ? $this->loadDescriptorsMap($keysGroup2, $group2Type) : [];
 
+        // Load task names for date-based groupings
+        $tasksMapGroup1 = [];
+        if ($group1Type !== null && $this->isDateBasedGroupType($group1Type)) {
+            $tasksMapGroup1 = $this->loadTasksForDateGroups($timeEntriesQuery->clone(), $group1Type, $timezone, $startOfWeek);
+        }
+
         if ($aggregatedTimeEntries['grouped_data'] !== null) {
             foreach ($aggregatedTimeEntries['grouped_data'] as $keyGroup1 => $group1) {
                 $aggregatedTimeEntries['grouped_data'][$keyGroup1]['description'] = $group1['key'] !== null ? ($descriptionMapGroup1[$group1['key']]['description'] ?? null) : null;
                 $aggregatedTimeEntries['grouped_data'][$keyGroup1]['color'] = $group1['key'] !== null ? ($descriptionMapGroup1[$group1['key']]['color'] ?? null) : null;
+                $aggregatedTimeEntries['grouped_data'][$keyGroup1]['tasks'] = $group1['key'] !== null ? ($tasksMapGroup1[$group1['key']] ?? null) : null;
                 if ($aggregatedTimeEntries['grouped_data'][$keyGroup1]['grouped_data'] !== null) {
                     foreach ($aggregatedTimeEntries['grouped_data'][$keyGroup1]['grouped_data'] as $keyGroup2 => $group2) {
                         $aggregatedTimeEntries['grouped_data'][$keyGroup1]['grouped_data'][$keyGroup2]['description'] = $group2['key'] !== null ? ($descriptionMapGroup2[$group2['key']]['description'] ?? null) : null;
@@ -367,6 +375,60 @@ class TimeEntryAggregationService
         }
 
         return $descriptorMap;
+    }
+
+    /**
+     * Check if a group type is date-based
+     */
+    private function isDateBasedGroupType(TimeEntryAggregationType $groupType): bool
+    {
+        return in_array($groupType, [
+            TimeEntryAggregationType::Day,
+            TimeEntryAggregationType::Week,
+            TimeEntryAggregationType::Month,
+            TimeEntryAggregationType::Year,
+        ]);
+    }
+
+    /**
+     * Load task names for date-based groupings
+     *
+     * @param  Builder<TimeEntry>  $timeEntriesQuery
+     * @return array<string, string>
+     */
+    private function loadTasksForDateGroups(Builder $timeEntriesQuery, TimeEntryAggregationType $groupType, string $timezone, Weekday $startOfWeek): array
+    {
+        $tasksMap = [];
+        $groupByQuery = $this->getGroupByQuery($groupType, $timezone, $startOfWeek);
+
+        // Query to get distinct task names per date group with JOIN to ensure tasks exist
+        $result = $timeEntriesQuery
+            ->join('tasks', 'time_entries.task_id', '=', 'tasks.id')
+            ->selectRaw($groupByQuery.' as date_group, tasks.id as task_id, tasks.name as task_name')
+            ->whereNotNull('time_entries.task_id')
+            ->groupBy('date_group', 'tasks.id', 'tasks.name')
+            ->orderBy('date_group')
+            ->orderBy('tasks.name')
+            ->get();
+
+        // Group tasks by date
+        foreach ($result as $row) {
+            /** @var object{date_group: string, task_id: string, task_name: string} $row */
+            $dateGroup = (string) $row->date_group;
+            $taskName = (string) $row->task_name;
+
+            if (!isset($tasksMap[$dateGroup])) {
+                $tasksMap[$dateGroup] = [];
+            }
+            $tasksMap[$dateGroup][] = $taskName;
+        }
+
+        // Convert arrays to comma-separated strings with unique names
+        foreach ($tasksMap as $dateGroup => $taskNames) {
+            $tasksMap[$dateGroup] = implode(', ', array_unique($taskNames));
+        }
+
+        return $tasksMap;
     }
 
     /**
