@@ -247,7 +247,7 @@ class TimeEntryAggregationService
 
         // Load task names for date-based groupings
         $tasksMapGroup1 = [];
-        if ($group1Type !== null && in_array($group1Type, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year])) {
+        if ($group1Type !== null && $this->isDateBasedGroupType($group1Type)) {
             $tasksMapGroup1 = $this->loadTasksForDateGroups($timeEntriesQuery->clone(), $group1Type, $timezone, $startOfWeek);
         }
 
@@ -378,6 +378,19 @@ class TimeEntryAggregationService
     }
 
     /**
+     * Check if a group type is date-based
+     */
+    private function isDateBasedGroupType(TimeEntryAggregationType $groupType): bool
+    {
+        return in_array($groupType, [
+            TimeEntryAggregationType::Day,
+            TimeEntryAggregationType::Week,
+            TimeEntryAggregationType::Month,
+            TimeEntryAggregationType::Year,
+        ]);
+    }
+
+    /**
      * Load task names for date-based groupings
      *
      * @param  Builder<TimeEntry>  $timeEntriesQuery
@@ -388,38 +401,29 @@ class TimeEntryAggregationService
         $tasksMap = [];
         $groupByQuery = $this->getGroupByQuery($groupType, $timezone, $startOfWeek);
 
-        // Query to get distinct task names per date group
+        // Query to get distinct task names per date group with JOIN to ensure tasks exist
         $result = $timeEntriesQuery
-            ->selectRaw($groupByQuery.' as date_group, task_id')
-            ->whereNotNull('task_id')
-            ->groupBy('date_group', 'task_id')
+            ->join('tasks', 'time_entries.task_id', '=', 'tasks.id')
+            ->selectRaw($groupByQuery.' as date_group, tasks.id as task_id, tasks.name as task_name')
+            ->whereNotNull('time_entries.task_id')
+            ->groupBy('date_group', 'tasks.id', 'tasks.name')
             ->orderBy('date_group')
-            ->orderBy('task_id')
+            ->orderBy('tasks.name')
             ->get();
-
-        // Load task names
-        $taskIds = $result->pluck('task_id')->unique()->filter()->toArray();
-        $tasks = Task::query()
-            ->whereIn('id', $taskIds)
-            ->select('id', 'name')
-            ->get()
-            ->keyBy('id');
 
         // Group tasks by date
         foreach ($result as $row) {
-            /** @var object{date_group: string, task_id: string} $row */
+            /** @var object{date_group: string, task_id: string, task_name: string} $row */
             $dateGroup = (string) $row->date_group;
-            $taskId = (string) $row->task_id;
+            $taskName = (string) $row->task_name;
 
-            if (isset($tasks[$taskId])) {
-                if (!isset($tasksMap[$dateGroup])) {
-                    $tasksMap[$dateGroup] = [];
-                }
-                $tasksMap[$dateGroup][] = $tasks[$taskId]->name;
+            if (!isset($tasksMap[$dateGroup])) {
+                $tasksMap[$dateGroup] = [];
             }
+            $tasksMap[$dateGroup][] = $taskName;
         }
 
-        // Convert arrays to comma-separated strings
+        // Convert arrays to comma-separated strings with unique names
         foreach ($tasksMap as $dateGroup => $taskNames) {
             $tasksMap[$dateGroup] = implode(', ', array_unique($taskNames));
         }
