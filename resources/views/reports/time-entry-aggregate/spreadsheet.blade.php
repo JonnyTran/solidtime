@@ -14,6 +14,11 @@
         <th style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_STRING }}">
             {{ $subGroup->description() }}
         </th>
+        @if(in_array($group, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year]))
+        <th style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_STRING }}">
+            Tasks
+        </th>
+        @endif
         <th style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_STRING }}">
             Duration
         </th>
@@ -56,6 +61,11 @@
                             {{ $group2Entry['description'] ?? $group2Entry['key'] ?? '-' }}
                         </td>
                     @endif
+                    @if(in_array($group, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year]))
+                    <td style="border: 1px solid black;" data-type="{{ DataType::TYPE_STRING }}">
+                        {{ $group1Entry['tasks'] ?? '-' }}
+                    </td>
+                    @endif
                     <td style="border: 1px solid black;" data-type="{{ DataType::TYPE_STRING }}">
                         {{ $interval->format($duration) }}
                     </td>
@@ -85,6 +95,11 @@
                         <td style="border: 1px solid black;" data-type="{{ DataType::TYPE_STRING }}">
                             {{ $group2Entry['description'] ?? $group2Entry['key'] ?? '-' }}
                         </td>
+                    @endif
+                    @if(in_array($group, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year]))
+                    <td style="border: 1px solid black;" data-type="{{ DataType::TYPE_STRING }}">
+                        {{ $group1Entry['tasks'] ?? '-' }}
+                    </td>
                     @endif
                     <td style="border: 1px solid black;" data-type="{{ DataType::TYPE_NUMERIC }}"
                         data-format="[hh]:mm:ss">
@@ -119,6 +134,11 @@
         <td style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_STRING }}">
             Total
         </td>
+        @if(in_array($group, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year]))
+        <td style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_STRING }}">
+            -
+        </td>
+        @endif
         @if($exportFormat === ExportFormat::ODS || $exportFormat === ExportFormat::CSV)
             <td style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_STRING }}">
                 {{ $interval->format($totalDurationInterval) }}
@@ -135,7 +155,11 @@
             <td style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_FORMULA }}"
                 data-format="[hh]:mm:ss">
                 @if($counter > 1)
-                    =SUM(C2:C{{ $counter }})
+                    @if(in_array($group, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year]))
+                        =SUM(D2:D{{ $counter }})
+                    @else
+                        =SUM(C2:C{{ $counter }})
+                    @endif
                 @else
                     =0
                 @endif
@@ -143,7 +167,11 @@
             <td style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_FORMULA }}"
                 data-format="{{ NumberFormat::FORMAT_NUMBER_00 }}">
                 @if($counter > 1)
-                    =SUM(D2:D{{ $counter }})
+                    @if(in_array($group, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year]))
+                        =SUM(E2:E{{ $counter }})
+                    @else
+                        =SUM(D2:D{{ $counter }})
+                    @endif
                 @else
                     =0
                 @endif
@@ -151,7 +179,11 @@
             <td style="border: 1px solid black; font-weight: bold;" data-type="{{ DataType::TYPE_FORMULA }}"
                 data-format="{{ NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1 }}">
                 @if($counter > 1)
-                    =SUM(E2:E{{ $counter }})
+                    @if(in_array($group, [TimeEntryAggregationType::Day, TimeEntryAggregationType::Week, TimeEntryAggregationType::Month, TimeEntryAggregationType::Year]))
+                        =SUM(F2:F{{ $counter }})
+                    @else
+                        =SUM(E2:E{{ $counter }})
+                    @endif
                 @else
                     =0
                 @endif

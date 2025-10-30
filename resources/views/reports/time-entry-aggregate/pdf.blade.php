@@ -177,6 +177,9 @@
                     <th>
                         {{ $group->description() }}
                     </th>
+                    @if(in_array($group, [\App\Enums\TimeEntryAggregationType::Day, \App\Enums\TimeEntryAggregationType::Week, \App\Enums\TimeEntryAggregationType::Month, \App\Enums\TimeEntryAggregationType::Year]))
+                    <th>Tasks</th>
+                    @endif
                     <th>Duration</th>
                     @if($showBillableRate)
                     <th style="text-align: right;">Cost</th>
@@ -198,6 +201,11 @@
                                 @endif
                             </span>
                         </td>
+                        @if(in_array($group, [\App\Enums\TimeEntryAggregationType::Day, \App\Enums\TimeEntryAggregationType::Week, \App\Enums\TimeEntryAggregationType::Month, \App\Enums\TimeEntryAggregationType::Year]))
+                        <td style="text-align: left;">
+                            {{ $group1Entry['tasks'] ?? '-' }}
+                        </td>
+                        @endif
                         <td style="text-align: left;">
                             {{ $localization->formatInterval(CarbonInterval::seconds($group1Entry['seconds'])) }}
                         </td>
@@ -213,6 +221,11 @@
                     <td style="font-weight: 500;color: #18181b;">
                         Total
                     </td>
+                    @if(in_array($group, [\App\Enums\TimeEntryAggregationType::Day, \App\Enums\TimeEntryAggregationType::Week, \App\Enums\TimeEntryAggregationType::Month, \App\Enums\TimeEntryAggregationType::Year]))
+                    <td style="font-weight: 500;color: #18181b;">
+                        -
+                    </td>
+                    @endif
                     <td style="font-weight: 500;color: #18181b;">
                         {{ $localization->formatInterval(CarbonInterval::seconds($aggregatedData['seconds'])) }}
                     </td>
